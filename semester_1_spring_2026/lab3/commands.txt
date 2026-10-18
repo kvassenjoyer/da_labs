@@ -1,0 +1,40 @@
+Проверка инструментов:
+g++ --version
+gprof --version
+dmalloc --version
+
+Создание каталога запуска:
+mkdir -p lab3/tmp
+
+Генерация большого входа для gprof:
+awk 'function key(n, s, p, q) { s=""; for (p=4; p>=0; --p) { q=int(n/(26^p))%26; s=s sprintf("%c", 97+q); } return s; } BEGIN { path="/workspaces/cpp-5/lab3/tmp/run_20260502_141447/profile_tree.bin"; for (i=0; i<80000; ++i) print "+ " key(i) " " i+1; for (i=0; i<80000; ++i) print key(i); print "! Save " path; for (i=0; i<80000; i+=3) print "- " key(i); print "! Load " path; for (i=0; i<80000; i+=2) print key(i); }' > lab3/tmp/run_20260502_141447/lab2_profile_input.txt
+
+Генерация входа для dmalloc:
+awk 'function key(n, s, p, q) { s=""; for (p=4; p>=0; --p) { q=int(n/(26^p))%26; s=s sprintf("%c", 97+q); } return s; } BEGIN { path="/workspaces/cpp-5/lab3/tmp/run_20260502_141447/dmalloc_tree.bin"; for (i=0; i<10000; ++i) print "+ " key(i) " " i+1; for (i=0; i<10000; ++i) print key(i); print "! Save " path; for (i=0; i<10000; i+=3) print "- " key(i); print "! Load " path; for (i=0; i<10000; i+=2) print key(i); }' > lab3/tmp/run_20260502_141447/lab2_dmalloc_input.txt
+
+Проверка числа команд во входах:
+wc -l lab3/tmp/lab2_profile_input.txt lab3/tmp/lab2_dmalloc_input.txt
+
+Сборка версии для gprof:
+g++ -std=c++17 -O0 -pg -g -Wall -Wextra -no-pie lab2.cpp -o lab3/tmp/lab2_gprof_o0_fixed
+
+Сборка версии для dmalloc:
+g++ -std=c++17 -O0 -g -Wall -Wextra -DDMALLOC -DDMALLOC_FUNC_CHECK lab2.cpp -o lab3/tmp/lab2_dmalloc_fixed -ldmallocthcxx -ldmallocth
+
+Запуск версии для gprof из каталога временных файлов:
+cd /workspaces/cpp-5/lab3/tmp
+./lab2_gprof_o0_fixed < lab2_profile_input.txt > lab2_profile_output.txt
+
+Создание текстового отчета gprof из gmon.out:
+gprof ./lab2_gprof_o0_fixed gmon.out > lab2_gprof_o0_fixed_report.txt
+
+Запуск версии для dmalloc:
+eval "$(dmalloc -b -l /workspaces/cpp-5/lab3/tmp/lab2_dmalloc_fixed.log -i 1000 high)"
+./lab2_dmalloc_fixed < lab2_dmalloc_input.txt > lab2_dmalloc_fixed_output.txt
+
+Проверка числа строк в выходах:
+wc -l lab2_profile_output.txt lab2_dmalloc_fixed_output.txt
+
+Просмотр ключевых строк отчетов:
+sed -n '1,80p' lab2_gprof_o0_fixed_report.txt
+tail -n 80 lab2_dmalloc_fixed.log
